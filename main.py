@@ -7,7 +7,6 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import random
-import xgboost
 import networkx as nx
 import plotly.express as px
 from sklearn.manifold import TSNE
@@ -64,6 +63,11 @@ print(df.head(1))
 """Search for nulls"""
 print(df.isnull().sum())
 
+df = df[ df['testelapse'] <= df['testelapse'].quantile(0.975) ]
+df = df[ df['testelapse'] >= df['testelapse'].quantile(0.025) ]
+df = df[ df['surveyelapse'] <= df['surveyelapse'].quantile(0.975) ]
+df = df[ df['surveyelapse'] >= df['surveyelapse'].quantile(0.025) ]
+
 DASS_keys = {'Depression': [3, 5, 10, 13, 16, 17, 21, 24, 26, 31, 34, 37, 38, 42],
              'Anxiety': [2, 4, 7, 9, 15, 19, 20, 23, 25, 28, 30, 36, 40, 41],
              'Stress': [1, 6, 8, 11, 12, 14, 18, 22, 27, 29, 32, 33, 35, 39]}
@@ -104,3 +108,67 @@ character = pd.concat([dass, personalities], axis=1)
 plot_correlation(character, cmap='viridis')
 
 print(DASS_keys)
+
+age_group = [
+    'below 20',
+    '20 to 24',
+    '25 to 29',
+    '30 to 34',
+    '35 to 39',
+    '40 to 49',
+    '50 to 59',
+    'above 60',
+]
+
+def label_age(row):
+    if row['age'] < 20:
+        return age_group[0]
+    elif row['age'] < 25:
+        return age_group[1]
+    elif row['age'] < 30:
+        return age_group[2]
+    elif row['age'] < 35:
+        return age_group[3]
+    elif row['age'] < 40:
+        return age_group[4]
+    elif row['age'] < 50:
+        return age_group[5]
+    elif row['age'] < 60:
+        return age_group[6]
+    elif row['age'] > 60:
+        return age_group[7]
+
+df['age_group'] = df.apply(lambda row: label_age(row), axis=1)
+print(df.head(2))
+
+def make_pie_chart(data, series, title):
+    temp_series = data[ series ].value_counts()
+        # what we want to show in our charts
+
+    labels = ( np.array(temp_series.index) )
+    sizes = ( np.array( ( temp_series / temp_series.sum() ) *100) )
+
+    trace = go.Pie(labels=labels,
+                   values=sizes)
+    layout= go.Layout(
+        title= title,
+        title_font_size= 24,
+        title_font_color= 'red',
+        title_x= 0.45,
+    )
+    fig = go.Figure(data= [trace],
+                    layout=layout)
+    fig.show()
+
+make_pie_chart(df, 'age_group', 'Distribution by Age')
+
+temp = df.copy()
+temp['gender'].replace({
+    1: "Male",
+    2: "Female",
+    3: "Non-binary",
+    0: "Unanswered",
+},
+    inplace=True)
+
+make_pie_chart(temp, 'gender', 'Distribution by Gender')
